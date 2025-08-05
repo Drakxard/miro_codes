@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Teoremas Editables</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+  >
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    defer
+  ></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.css"
+  />
+  <style>
+    .editable:hover {
+      background-color: #fffbea;
+      cursor: text;
+    }
+    .editable[contenteditable="true"],
+    .editable:focus {
+      background-color: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    .mq-editable-field,
+    .mq-editable-field .mq-root-block {
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .mq-editable-field:focus {
+      outline: none !important;
+    }
+  </style>
+</head>
+<body class="section">
+  <div class="container content">
+    <h1 class="title">Bases en Espacios Vectoriales</h1>
+    <div class="box">
+      <p class="editable"><strong>Teorema 5.5.5</strong></p>
+      <p class="editable">
+        Cualesquiera $n$ vectores linealmente independientes (LI)
+        en un espacio vectorial $V$ de dimensión $n$
+        constituyen una base para $V$.
+      </p>
+      <hr>
+      <p class="editable"><em>Este teorema generaliza lo que sabíamos para:</em></p>
+      <p class="editable"><strong>Teorema 5.4.7</strong></p>
+      <p class="editable">
+        Cualquier conjunto de $n$ vectores LI en $\mathbb{R}^n$
+        genera a $\mathbb{R}^n$ y, por lo tanto, es base de $\mathbb{R}^n$.
+      </p>
+      <hr>
+      <p class="editable"><strong>Ejemplo</strong></p>
+      <p class="editable">
+        Sea $H = \mathbb{R}^2$. Entonces $H$ es un subespacio de $\mathbb{R}^2$.
+      </p>
+    </div>
+  </div>
+
+  <!-- Dependencias -->
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"
+  ></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const md = window.markdownit({ html: false, breaks: true, linkify: true });
+      const MQ = MathQuill.getInterface(2);
+
+      // Convierte Markdown a HTML y envuelve cada $...$ en un <span.math-field>
+      function markdownToHtmlWithMath(str) {
+        return md.render(str)
+          .replace(/\$\s*([^$]+?)\s*\$/g, (_, tex) => {
+            const cleaned = tex.replace(/\\\\/g, '\\').trim();
+            return `<span class="math-field">${cleaned}</span>`;
+          });
+      }
+
+      function enhanceMathField(span) {
+        if (span._mqInstance) return;
+        const mf = MQ.MathField(span, {
+          spaceBehavesLikeTab: true,
+          handlers: { edit: () => console.log('LaTeX:', mf.latex()) }
+        });
+        span._mqInstance = mf;
+
+        span.addEventListener('keydown', ev => {
+          const cur = mf.__controller.cursor;
+          // Salir al texto previo
+          if (ev.key === 'ArrowLeft' && cur.parent === cur.root && !cur.prev) {
+            ev.preventDefault();
+            span.blur();
+            const p = span.closest('p.editable');
+            p.focus();
+            const prev = span.previousSibling;
+            if (prev && prev.nodeType === Node.TEXT_NODE) {
+              const r = document.createRange();
+              r.setStart(prev, prev.textContent.length);
+              r.collapse(true);
+              const s = window.getSelection();
+              s.removeAllRanges();
+              s.addRange(r);
+            }
+          }
+          // Salir al texto siguiente
+          if (ev.key === 'ArrowRight' && cur.parent === cur.root && !cur.next) {
+            ev.preventDefault();
+            span.blur();
+            const p = span.closest('p.editable');
+            p.focus();
+            const next = span.nextSibling;
+            if (next && next.nodeType === Node.TEXT_NODE) {
+              const r = document.createRange();
+              r.setStart(next, 0);
+              r.collapse(true);
+              const s = window.getSelection();
+              s.removeAllRanges();
+              s.addRange(r);
+            }
+          }
+        });
+      }
+
+      function initMathFields(root = document) {
+        root.querySelectorAll('span.math-field').forEach(enhanceMathField);
+      }
+
+      // Procesa todos los <p.editable> al cargar para convertir $...$
+      document.querySelectorAll('p.editable').forEach(p => {
+        const texto = p.textContent;
+        p.innerHTML = markdownToHtmlWithMath(texto);
+      });
+
+      // Inicializa edición y MathQuill
+      document.querySelectorAll('p.editable').forEach(p => {
+        p.contentEditable = 'false';
+
+        // Clic para entrar en edición
+        p.addEventListener('click', ev => {
+          p.contentEditable = 'true';
+          p.focus();
+          let range;
+          if (document.caretPositionFromPoint) {
+            const pos = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+            range = document.createRange();
+            range.setStart(pos.offsetNode, pos.offset);
+          } else {
+            range = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+          }
+          if (range) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          const tgt = ev.target;
+          if (tgt.classList.contains('math-field') && tgt._mqInstance) {
+            tgt._mqInstance.focus();
+          }
+        });
+
+        // Ctrl+L para insertar campo MathQuill
+        p.addEventListener('keydown', ev => {
+          if (ev.ctrlKey && ev.key.toLowerCase() === 'l') {
+            ev.preventDefault();
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            const range = sel.getRangeAt(0);
+            range.collapse(true);
+            const span = document.createElement('span');
+            span.className = 'math-field';
+            span.setAttribute('contenteditable', 'false');
+            range.insertNode(span);
+            enhanceMathField(span);
+            span._mqInstance.focus();
+            return;
+          }
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            p.blur();
+          }
+        });
+
+        // Pegado de Markdown
+        p.addEventListener('paste', ev => {
+          ev.preventDefault();
+          const text = (ev.clipboardData || window.clipboardData).getData('text');
+          const html = markdownToHtmlWithMath(text);
+          document.execCommand('insertHTML', false, html);
+          initMathFields(p);
+        });
+
+        // Al perder foco
+        p.addEventListener('blur', () => {
+          p.contentEditable = 'false';
+          console.log('Texto editado:', p.innerHTML);
+        }, true);
+      });
+
+      // Inicializa MathQuill en los spans creados
+      initMathFields();
+    });
+  </script>
+</body>
+</html>
