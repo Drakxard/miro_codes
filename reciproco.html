@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Conceptos con API Groq</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-key { background: #fef3c7; color: #d97706; }
+        .icon-settings { background: #e0e7ff; color: #6366f1; }
+        .icon-brain { background: #dcfce7; color: #16a34a; }
+        .icon-arrow { background: #dbeafe; color: #2563eb; }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-with-button {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-with-button select {
+            flex: 1;
+        }
+
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .response-box {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+            border: 2px solid #e5e7eb;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 150px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            color: #dc2626;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .prompt-config {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .prompt-config.show {
+            display: block;
+        }
+
+        .prompt-preview {
+            background: #eff6ff;
+            border: 2px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #1e40af;
+        }
+
+        .prompt-preview-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2563eb;
+            margin-bottom: 4px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧠 Analizador de Conceptos</h1>
+            <p>Analiza conceptos con IA para entender sus implicaciones y recíprocos</p>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="card">
+            <div class="section-title">
+                <div class="icon icon-key">🔑</div>
+                <h2>Configuración API Groq</h2>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="apiKey">Clave API de Groq</label>
+                    <input type="password" id="apiKey" placeholder="Ingresa tu API Key de Groq...">
+                </div>
+                <div class="form-group">
+                    <label for="model">Modelo</label>
+                    <div class="input-with-button">
+                        <select id="model">
+                            <option value="">Selecciona un modelo...</option>
+                        </select>
+                        <button type="button" id="loadModels" class="btn-small">
+                            <span id="loadModelsText">🔄</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
+                Obtén tu API Key gratuita en <a href="https://console.groq.com/keys" target="_blank" style="color: #6366f1;">console.groq.com</a>
+            </p>
+        </div>
+
+        <!-- Prompts Configuration -->
+        <div class="card">
+            <div class="section-title">
+                <div class="icon icon-settings">⚙️</div>
+                <h2>Configuración de Prompts</h2>
+            </div>
+            <div class="controls">
+                <button type="button" id="resetPrompts" class="btn-secondary">Resetear</button>
+                <button type="button" id="togglePrompts" class="btn-secondary">
+                    <span id="togglePromptsText">👁️ Mostrar</span>
+                </button>
+            </div>
+            
+            <div id="promptConfig" class="prompt-config">
+                <div class="form-group">
+                    <label for="promptReciproco">Prompt para "Recíproco" (usa {concepto} como placeholder)</label>
+                    <textarea id="promptReciproco" rows="3">{concepto} - Explica qué recíproco presenta este concepto, en proporciones y palabras simples. Sé conciso y directo.</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card">
+            <div class="form-group">
+                <label for="concepto">Concepto a Analizar</label>
+                <input type="text" id="concepto" placeholder="Ej: Democracia, Economía, Educación...">
+            </div>
+            
+            <button type="button" id="analyzeBtn">
+                <span id="analyzeBtnText">🧠 Analizar Concepto</span>
+            </button>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error" style="display: none;"></div>
+
+        <!-- Results -->
+        <div class="results-grid">
+            <!-- Recíproco Section -->
+            <div class="card">
+                <div class="section-title">
+                    <div class="icon icon-arrow">↔️</div>
+                    <h2>Recíproco</h2>
+                </div>
+                <div id="reciprocoPrompt" class="prompt-preview" style="display: none;">
+                    <div class="prompt-preview-label">Prompt usado:</div>
+                    <div id="reciprocoPromptText"></div>
+                </div>
+                <div id="reciprocoResponse" class="response-box">
+                    El recíproco aparecerá aquí...
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Powered by Groq AI • Análisis conceptual inteligente • <span id="currentModel"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let apiKey = '';
+        let selectedModel = '';
+        let availableModels = [];
+        let showPrompts = false;
+        let loading = false;
+
+        // Elementos del DOM
+        const elements = {
+            apiKey: document.getElementById('apiKey'),
+            model: document.getElementById('model'),
+            loadModels: document.getElementById('loadModels'),
+            loadModelsText: document.getElementById('loadModelsText'),
+            concepto: document.getElementById('concepto'),
+            promptReciproco: document.getElementById('promptReciproco'),
+            promptConfig: document.getElementById('promptConfig'),
+            togglePrompts: document.getElementById('togglePrompts'),
+            togglePromptsText: document.getElementById('togglePromptsText'),
+            resetPrompts: document.getElementById('resetPrompts'),
+            analyzeBtn: document.getElementById('analyzeBtn'),
+            analyzeBtnText: document.getElementById('analyzeBtnText'),
+            errorMessage: document.getElementById('errorMessage'),
+            reciprocoResponse: document.getElementById('reciprocoResponse'),
+            reciprocoPrompt: document.getElementById('reciprocoPrompt'),
+            reciprocoPromptText: document.getElementById('reciprocoPromptText'),
+            currentModel: document.getElementById('currentModel')
+        };
+
+        // Funciones de utilidad
+        function showError(message) {
+            elements.errorMessage.textContent = message;
+            elements.errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            elements.errorMessage.style.display = 'none';
+        }
+
+        function updateCurrentModel() {
+            elements.currentModel.textContent = selectedModel ? `Modelo: ${selectedModel}` : '';
+        }
+
+        // Cargar modelos disponibles
+        async function loadModels() {
+            const currentApiKey = elements.apiKey.value.trim();
+            
+            if (!currentApiKey) {
+                showError('Ingresa tu API Key primero para cargar los modelos');
+                return;
+            }
+
+            elements.loadModelsText.textContent = '⏳';
+            elements.loadModels.disabled = true;
+            hideError();
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentApiKey}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error al cargar modelos: ${response.status}`);
+                }
+
+                const data = await response.json();
+                availableModels = data.data.map(model => model.id).sort();
+                
+                // Limpiar y llenar el select
+                elements.model.innerHTML = '<option value="">Selecciona un modelo...</option>';
+                availableModels.forEach(modelId => {
+                    const option = document.createElement('option');
+                    option.value = modelId;
+                    option.textContent = modelId;
+                    elements.model.appendChild(option);
+                });
+
+                // Seleccionar el primer modelo automáticamente
+                if (availableModels.length > 0) {
+                    selectedModel = availableModels[0];
+                    elements.model.value = selectedModel;
+                    updateCurrentModel();
+                }
+
+            } catch (error) {
+                showError(`Error al cargar modelos: ${error.message}`);
+            } finally {
+                elements.loadModelsText.textContent = '🔄';
+                elements.loadModels.disabled = false;
+            }
+        }
+
+        // Llamada a la API de Groq
+        async function callGroqAPI(prompt) {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    max_tokens: 1024,
+                    temperature: 0.6
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error de API: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        // Analizar concepto
+        async function analyzeConcepto() {
+            const concepto = elements.concepto.value.trim();
+            apiKey = elements.apiKey.value.trim();
+            selectedModel = elements.model.value;
+
+            if (!concepto) {
+                showError('Por favor ingresa un concepto');
+                return;
+            }
+            
+            if (!apiKey) {
+                showError('Por favor ingresa tu API Key de Groq');
+                return;
+            }
+
+            if (!selectedModel) {
+                showError('Por favor carga y selecciona un modelo primero');
+                return;
+            }
+
+            loading = true;
+            elements.analyzeBtn.disabled = true;
+            elements.analyzeBtnText.textContent = `⏳ Analizando con ${selectedModel}...`;
+            hideError();
+
+            elements.reciprocoResponse.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                // Preparar prompts
+                const promptReciprocoFinal = elements.promptReciproco.value.replace('{concepto}', concepto);
+
+                // Mostrar prompts si está habilitado
+                if (showPrompts) {
+                    elements.reciprocoPromptText.textContent = promptReciprocoFinal;
+                    elements.reciprocoPrompt.style.display = 'block';
+                }
+
+                // Segunda llamada - Recíproco
+                const respuestaReciproco = await callGroqAPI(promptReciprocoFinal);
+                elements.reciprocoResponse.textContent = respuestaReciproco;
+
+            } catch (error) {
+                showError(`Error: ${error.message}`);
+                elements.reciprocoResponse.textContent = 'Error al obtener respuesta...';
+            } finally {
+                loading = false;
+                elements.analyzeBtn.disabled = false;
+                elements.analyzeBtnText.textContent = '🧠 Analizar Concepto';
+            }
+        }
+
+        // Toggle prompts visibility
+        function togglePrompts() {
+            showPrompts = !showPrompts;
+            if (showPrompts) {
+                elements.promptConfig.classList.add('show');
+                elements.togglePromptsText.textContent = '🙈 Ocultar';
+            } else {
+                elements.promptConfig.classList.remove('show');
+                elements.togglePromptsText.textContent = '👁️ Mostrar';
+                elements.implicaPrompt.style.display = 'none';
+                elements.reciprocoPrompt.style.display = 'none';
+            }
+        }
+
+        // Reset prompts
+        function resetPrompts() {
+            elements.promptReciproco.value = '{concepto} - Explica qué recíproco presenta este concepto, en proporciones y palabras simples. Sé conciso y directo.';
+        }
+
+        // Event listeners
+        elements.loadModels.addEventListener('click', loadModels);
+        elements.model.addEventListener('change', (e) => {
+            selectedModel = e.target.value;
+            updateCurrentModel();
+        });
+        elements.togglePrompts.addEventListener('click', togglePrompts);
+        elements.resetPrompts.addEventListener('click', resetPrompts);
+        elements.analyzeBtn.addEventListener('click', analyzeConcepto);
+        elements.concepto.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !loading) {
+                analyzeConcepto();
+            }
+        });
+
+        // Inicialización
+        updateCurrentModel();
+    </script>
+</body>
+</html>
